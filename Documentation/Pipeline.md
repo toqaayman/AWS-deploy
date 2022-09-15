@@ -1,5 +1,5 @@
 ## Udagram Pipeline
-![Pipeline]([Diagrams/pipeline.png](https://github.com/toqaayman/AWS-deploy/blob/main/Diagrams/pipeline.png))
+![Pipeline](https://github.com/toqaayman/AWS-deploy/blob/main/Diagrams/pipeline.png)
 # Pipeline process
 
 Our process may be summed up in a few stages:
