@@ -1,40 +1,79 @@
-orbs: # declare what orbs we are going to use
-  node: circleci/node@5.0.0 # the node orb provides common node-related configuration
-  aws-cli: circleci/aws-cli@2.0.6
+version: 2.1
+orbs:
+  # orgs contain basc recipes and reproducible actions (install node, aws, etc.)
+  node: circleci/node@5.0.2
   eb: circleci/aws-elastic-beanstalk@2.0.1
-version: 2.1 # using 2.1 provides access to orbs and other features
-
+  aws-cli: circleci/aws-cli@3.1.1
+  # different jobs are calles later in the workflows sections
 jobs:
   build:
     docker:
-      - image: cimg/base:stable
+      # the base image can run most needed actions with orbs
+      - image: "cimg/node:16.15"
     steps:
-      - checkout
+      # install node and checkout code
       - node/install:
-          node-version: 12.22.10
+          node-version: "16.15"
+      - checkout
       - aws-cli/setup
+      # Use root level package.json to install dependencies in the frontend app
+      - run:
+          name: Install Front-End Dependencies
+          command: |
+            echo "NODE --version" 
+            echo $(node --version)
+            echo "NPM --version" 
+            echo $(npm --version)
+            npm run frontend:install
+      # TODO: Install dependencies in the the backend API
+      - run:
+          name: Install API Dependencies
+          command: |
+            npm run api:install
+      # TODO: Lint the frontend
+      - run:
+          name: Front-End Lint
+          command: |
+            echo "TODO: Lint the frontend"
+      # TODO: Build the frontend app
+      - run:
+          name: Front-End Build
+          command: |
+            npm run frontend:build
+      # TODO: Build the backend API
+      - run:
+          name: API Build
+          command: |
+            npm run api:build
+  # deploy step will run only after manual approval
+  deploy:
+    docker:
+      - image: "cimg/base:stable"
+      # more setup needed for aws, node, elastic beanstalk
+    steps:
+      - node/install:
+          node-version: "16.15"
       - eb/setup
+      - aws-cli/setup
+      - checkout
       - run:
-          name: installing the project dependencies
-          command: npm run install
-      - run:
-          name: building the project
-          command: npm run build
-      - run:
-          name: running the project tests
-          command: npm run test
-      - run:
-          name: Setting environment Vairables
-          command: cd udagram-api && eb use udagram-api-dev && eb setenv AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID && eb setenv AWS_DEFAULT_REGION=$AWS_DEFAULT_REGION && eb setenv AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY && eb setenv JWT_SECRET=$JWT_SECRET && eb setenv PORT=$PORT && eb setenv POSTGRES_DB=$POSTGRES_DB && eb setenv POSTGRES_HOST=$POSTGRES_HOST && eb setenv POSTGRES_PASSWORD=$POSTGRES_PASSWORD && eb setenv POSTGRES_USERNAME=$POSTGRES_USERNAME
-      - run:
-            name: Deploying the project
-            command: npm run deploy
-          
+          name: Deploy App
+          # TODO: Install, build, deploy in both apps
+          command: |
+            npm run deploy
+
 workflows:
-  workflow:                    
+  udagram:
     jobs:
-      - build:  
+      - build
+      - hold:
           filters:
             branches:
-               only:                
-                  - main
+              only:
+                - main
+          type: approval
+          requires:
+            - build
+      - deploy:
+          requires:
+            - hold
