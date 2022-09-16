@@ -14,61 +14,112 @@ jobs:
       # install node and checkout code
       - node/install:
           node-version: '16.17'         
-      - checkout
-      # Use root level package.json to install dependencies in the frontend app
+       - checkout
+      - restore_cache:
+          keys:
+            - frontend-dependencies{{ checksum "udagram/udagram-frontend/package.json" }}
+            - frontend-dependencies
       - run:
-          name: Install Front-End Dependencies
-          command: |
+         name: Install front-end dependencies
+         command: |
             npm run frontend:install
-      # TODO: Install dependencies in the the backend API          
+      - save_cache:
+          paths:
+            - udagram-frontend/node_modules
+          key: frontend-dependencies
+      - restore_cache:
+          keys:
+            - backend-dependencies{{ checksum "udagram/udagram-api/package.json" }}
+            - backend-dependencies
       - run:
-          name: Install API Dependencies
+          name: Install back-end dependencies
           command: |
-           npm run backend:install
-      # TODO: Lint the frontend
+            npm run api:install
+      - save_cache:
+          paths:
+            - udagram-api/node_modules
+          key: backend-dependencies
       - run:
-          name: Front-End Lint
-          command: |
-            npm run frontend:lint
-      # TODO: Build the frontend app
-      - run:
-          name: Front-End Build
-          command: |
+         name: Build front-end
+         command: |
             npm run frontend:build
-      # TODO: Build the backend API      
+      - persist_to_workspace:
+          root: udagram/udagram-frontend
+          paths:
+            - www
       - run:
-          name: API Build
+          name: Build back-end
           command: |
             npm run api:build
-  # deploy step will run only after manual approval
-  deploy:
+      - persist_to_workspace:
+          root: udagram/udagram-api
+          paths:
+            - www
+  test:
     docker:
-      - image: "cimg/base:stable"
-      # more setup needed for aws, node, elastic beanstalk
+      - image: 'cimg/base:stable'
     steps:
       - node/install:
-          node-version: '14.15' 
-      - eb/setup
-      - aws-cli/setup
+          node-version: '16.17'
       - checkout
+      - browser-tools/install-chrome
+      - browser-tools/install-chromedriver
+      - restore_cache:
+          keys:
+            - frontend-dependencies{{ checksum "udagram/udagram-frontend/package.json" }}
+            - frontend-dependencies
+  deploy:
+    docker:
+      - image: 'cimg/base:stable'
+    steps:
+      - node/install:
+          node-version: '16.17'
+      - checkout
+      - aws-cli/setup
+      - aws-elastic-beanstalk/setup
+      - restore_cache:
+          keys:
+            - frontend-dependencies{{ checksum "udagram/udagram-frontend/package.json" }}
+            - frontend-dependencies
+      - attach_workspace:
+          at: udagram/udagram-frontend
       - run:
-          name: Deploy App
-          # TODO: Install, build, deploy in both apps
+          name: Deploy frontend
           command: |
-            npm run deploy
-            
+            npm run frontend:deploy
+      - run:
+          name: configure eb
+          command: |
+            cd udagram/udagram-api
+            eb init udagram-api --platform node.js --region us-east-1
+            eb use udagram-api-dev
+            eb setenv  POSTGRES_USERNAME=$POSTGRES_USERNAME POSTGRES_PASSWORD=$POSTGRES_PASSWORD POSTGRES_DB=$POSTGRES_DB PORT=$PORT  POSTGRES_HOST=$POSTGRES_HOST AWS_BUCKET=$AWS_BUCKET URL=$URL JWT_SECRET=$JWT_SECRET AWS_REGION=$AWS_DEFAULT_REGION AWS_PROFILE=$AWS_PROFILE  PORT=$PORT AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
+      - attach_workspace:
+          at: udagram/udagram-api
+      - run:
+          name: Deploy backend
+          command: |
+            npm run api:deploy
 workflows:
+  version: 2
   udagram:
     jobs:
-      - build
-      - hold:
+      - build:
+          filters:
+            branches:
+              only:
+               - master
+      - test:
+          requires:
+            - build
           filters:
             branches:
               only:
                 - master
-          type: approval
-          requires:
-            - build
       - deploy:
           requires:
-            - hold
+            - test
+          filters:
+            branches:
+              only:
+                - master
