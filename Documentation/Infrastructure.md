@@ -1,5 +1,5 @@
 ## Udagram Infrastructure
-![Infrastructure](diagrams/Infrastructure.png)
+![Infrastructure](https://github.com/toqaayman/AWS-deploy/blob/main/Diagrams/Infrastructure.png)
 # Infrastructure
 Infrastructure mostly makes use of four services.
 
