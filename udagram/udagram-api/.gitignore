@@ -30,7 +30,7 @@ plugins/ios.json
 $RECYCLE.BIN/
 postgres_dev/
 logfile
-.elasticbeanstalk/
+
 
 .DS_Store
 Thumbs.db
@@ -38,7 +38,4 @@ UserInterfaceState.xcuserstate
 node_modules
 venv/
 .env
-# Elastic Beanstalk Files
-.elasticbeanstalk/*
-!.elasticbeanstalk/*.cfg.yml
-!.elasticbeanstalk/*.global.yml
+
