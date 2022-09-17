@@ -9,117 +9,75 @@ jobs:
   build:
     docker:
       # the base image can run most needed actions with orbs
-      - image: "cimg/node:16.17.1"
+      - image: "cimg/node:14.15"
     steps:
       # install node and checkout code
       - node/install:
-          node-version: '16.17.1'         
+          node-version: '14.15'         
       - checkout
-      - restore_cache:
-          keys:
-            - frontend-dependencies{{ checksum "udagram/udagram-frontend/package.json" }}
-            - frontend-dependencies
+      # Use root level package.json to install dependencies in the frontend app
       - run:
-         name: Install front-end dependencies
-         command: |
+          name: Install Front-End Dependencies
+          command: |
+            echo "NODE --version" 
+            echo $(node --version)
+            echo "NPM --version" 
+            echo $(npm --version)
             npm run frontend:install
-      - save_cache:
-          paths:
-            - udagram-frontend/node_modules
-          key: frontend-dependencies
-      - restore_cache:
-          keys:
-            - backend-dependencies{{ checksum "udagram/udagram-api/package.json" }}
-            - backend-dependencies
+      # TODO: Install dependencies in the the backend API          
       - run:
-          name: Install back-end dependencies
+          name: Install API Dependencies
           command: |
-            npm run api:install
-      - save_cache:
-          paths:
-            - udagram-api/node_modules
-          key: backend-dependencies
+           echo "TODO: Install dependencies in the the backend API  "
+           npm run api:install
+      # TODO: Lint the frontend
       - run:
-         name: Build front-end
-         command: |
+          name: Front-End Lint
+          command: |
+            echo "TODO: Lint the frontend"
+            npm run frontend:lint
+      # TODO: Build the frontend app
+      - run:
+          name: Front-End Build
+          command: |
+            echo "TODO: Build the frontend app"
             npm run frontend:build
-      - persist_to_workspace:
-          root: udagram/udagram-frontend
-          paths:
-            - www
+      # TODO: Build the backend API      
       - run:
-          name: Build back-end
+          name: API Build
           command: |
+            echo "TODO: Build the backend API"
             npm run api:build
-      - persist_to_workspace:
-          root: udagram/udagram-api
-          paths:
-            - www
-  test:
-    docker:
-      - image: 'cimg/base:stable'
-    steps:
-      - node/install:
-          node-version: '16.17'
-      - checkout
-      - browser-tools/install-chrome
-      - browser-tools/install-chromedriver
-      - restore_cache:
-          keys:
-            - frontend-dependencies{{ checksum "udagram/udagram-frontend/package.json" }}
-            - frontend-dependencies
+  # deploy step will run only after manual approval
   deploy:
     docker:
-      - image: 'cimg/base:stable'
+      - image: "cimg/base:stable"
+      # more setup needed for aws, node, elastic beanstalk
     steps:
       - node/install:
-          node-version: '16.17'
-      - checkout
+          node-version: '14.15' 
+      - eb/setup
       - aws-cli/setup
-      - aws-elastic-beanstalk/setup
-      - restore_cache:
-          keys:
-            - frontend-dependencies{{ checksum "udagram/udagram-frontend/package.json" }}
-            - frontend-dependencies
-      - attach_workspace:
-          at: udagram/udagram-frontend
+      - checkout
       - run:
-          name: Deploy frontend
+          name: Deploy App
+          # TODO: Install, build, deploy in both apps
           command: |
-            npm run frontend:deploy
-      - run:
-          name: configure eb
-          command: |
-            cd udagram/udagram-api
-            eb init udagram-api --platform node.js --region us-east-1
-            eb use udagram-api-dev
-            eb setenv  POSTGRES_USERNAME=$POSTGRES_USERNAME POSTGRES_PASSWORD=$POSTGRES_PASSWORD POSTGRES_DB=$POSTGRES_DB PORT=$PORT  POSTGRES_HOST=$POSTGRES_HOST AWS_BUCKET=$AWS_BUCKET URL=$URL JWT_SECRET=$JWT_SECRET AWS_REGION=$AWS_DEFAULT_REGION AWS_PROFILE=$AWS_PROFILE  PORT=$PORT AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
-      - attach_workspace:
-          at: udagram/udagram-api
-      - run:
-          name: Deploy backend
-          command: |
-            npm run api:deploy
+            echo "# TODO: Install, build, deploy in both apps"
+            npm run deploy
+            
 workflows:
-  version: 2
   udagram:
     jobs:
-      - build:
+      - build
+      - hold:
           filters:
             branches:
               only:
-               - master
-      - test:
+                - master
+          type: approval
           requires:
             - build
-          filters:
-            branches:
-              only:
-                - master
       - deploy:
           requires:
-            - test
-          filters:
-            branches:
-              only:
-                - master
+            - hold
