@@ -13,8 +13,8 @@ jobs:
     steps:
       # install node and checkout code
       - node/install:
-          node-version: '16.17'         
-       - checkout
+          node-version: '16.15'         
+      - checkout
       - restore_cache:
           keys:
             - frontend-dependencies{{ checksum "udagram/udagram-frontend/package.json" }}
